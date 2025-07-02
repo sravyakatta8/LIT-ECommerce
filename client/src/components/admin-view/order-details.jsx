@@ -149,12 +149,6 @@ function AdminOrderDetailsView({ orderDetails }) {
                 { id: "rejected", label: "Rejected" },
               ],
             },
-            {
-              label: "Notification Message",
-              name: "notificationMessage",
-              componentType: "textarea",
-              placeholder: "Enter notification message",
-            },
           ]}
           formData={formData}
           setFormData={setFormData}
