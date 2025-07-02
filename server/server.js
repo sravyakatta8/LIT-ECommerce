@@ -30,18 +30,25 @@ mongoose
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-app.use(cors({
-  origin: "https://lit-e-commerce.vercel.app",
-  methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "Cache-Control",
-    "Expires",
-    "Pragma",
-  ],
-  credentials: true,
-}));
+const allowedOrigins = [
+  "http://localhost:5173",               // local dev
+  "https://lit-e-commerce.vercel.app",  // vercel frontend
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.use(cookieParser());
 app.use(express.json());
