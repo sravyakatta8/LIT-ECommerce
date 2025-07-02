@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
-//register
+// REGISTER
 const registerUser = async (req, res) => {
   const { userName, email, password } = req.body;
 
@@ -30,12 +30,12 @@ const registerUser = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
 
-//login
+// LOGIN
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -44,13 +44,10 @@ const loginUser = async (req, res) => {
     if (!checkUser)
       return res.json({
         success: false,
-        message: "User doesn't exists! Please register first",
+        message: "User doesn't exist! Please register first",
       });
 
-    const checkPasswordMatch = await bcrypt.compare(
-      password,
-      checkUser.password
-    );
+    const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
     if (!checkPasswordMatch)
       return res.json({
         success: false,
@@ -68,7 +65,13 @@ const loginUser = async (req, res) => {
       { expiresIn: "60m" }
     );
 
-    res.cookie("token", token, { httpOnly: true, secure: false }).json({
+    // ✅ Updated cookie settings for Render + Vercel
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,         // must be true on HTTPS (Render)
+      sameSite: "None",     // required for cross-site (Vercel)
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    }).json({
       success: true,
       message: "Logged in successfully",
       user: {
@@ -82,27 +85,30 @@ const loginUser = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
 
-//logout
-
+// LOGOUT
 const logoutUser = (req, res) => {
-  res.clearCookie("token").json({
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+  }).json({
     success: true,
     message: "Logged out successfully!",
   });
 };
 
-//auth middleware
+// AUTH MIDDLEWARE
 const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
   if (!token)
     return res.status(401).json({
       success: false,
-      message: "Unauthorised user!",
+      message: "Unauthorized user!",
     });
 
   try {
@@ -112,9 +118,14 @@ const authMiddleware = async (req, res, next) => {
   } catch (error) {
     res.status(401).json({
       success: false,
-      message: "Unauthorised user!",
+      message: "Unauthorized user!",
     });
   }
 };
 
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
+module.exports = {
+  registerUser,
+  loginUser,
+  logoutUser,
+  authMiddleware,
+};
