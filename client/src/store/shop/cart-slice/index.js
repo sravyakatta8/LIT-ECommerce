@@ -60,10 +60,25 @@ export const updateCartQuantity = createAsyncThunk(
   }
 );
 
+export const clearCartOnServer = createAsyncThunk(
+  "cart/clearCartOnServer",
+  async (userId) => {
+    const response = await axios.delete(
+      `${import.meta.env.VITE_API_URL}/api/shop/cart/clear/${userId}`
+    );
+
+    return response.data;
+  }
+);
+
 const shoppingCartSlice = createSlice({
   name: "shoppingCart",
   initialState,
-  reducers: {},
+  reducers: {
+    clearCart: (state) => {
+      state.cartItems = [];
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(addToCart.pending, (state) => {
@@ -109,8 +124,20 @@ const shoppingCartSlice = createSlice({
       .addCase(deleteCartItem.rejected, (state) => {
         state.isLoading = false;
         state.cartItems = [];
+      })
+      .addCase(clearCartOnServer.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(clearCartOnServer.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.cartItems = [];
+      })
+      .addCase(clearCartOnServer.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });
+
+export const { clearCart } = shoppingCartSlice.actions;
 
 export default shoppingCartSlice.reducer;

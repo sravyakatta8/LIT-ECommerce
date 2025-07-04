@@ -5,6 +5,7 @@ import UserCartItemsContent from "@/components/shopping-view/cart-items-content"
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { createNewOrder } from "@/store/shop/order-slice";
+import { clearCart, clearCartOnServer } from "@/store/shop/cart-slice";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -35,7 +36,7 @@ function ShoppingCheckout() {
         )
       : 0;
 
-  function handleInitiatePayment() {
+async function handleInitiatePayment() {
     if (cartItems.length === 0) {
       toast({
         title: "Your cart is empty. Please add items to proceed",
@@ -76,7 +77,7 @@ function ShoppingCheckout() {
       },
       orderStatus: "pending",
       paymentMethod: paymentMethod,
-      paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
+      paymentStatus: paymentMethod === "cod" ? "placed" : "pending",
       totalAmount: totalCartAmount,
       orderDate: new Date(),
       orderUpdateDate: new Date(),
@@ -84,42 +85,43 @@ function ShoppingCheckout() {
       payerId: "",
     };
 
-    dispatch(createNewOrder(orderData))
-      .then((data) => {
-        console.log(data, "sangam");
-        if (data?.payload?.success) {
-          setIsPaymemntStart(true);
-          if (paymentMethod === "paypal" && data?.payload?.approvalURL) {
-            window.location.href = data.payload.approvalURL;
-          } else if (paymentMethod === "cod") {
-            setOrderPlaced(true);
-            toast({
-              title: "Thank you, order is placed successfully.",
-              variant: "default",
-            });
-            // Navigate to account orders page after short delay
-            setTimeout(() => {
-              navigate("/shop/account");
-            }, 2000);
-          }
-        } else {
-          setIsPaymemntStart(false);
+    try {
+      const data = await dispatch(createNewOrder(orderData));
+      console.log(data, "sravya");
+      if (data?.payload?.success) {
+        setIsPaymemntStart(true);
+        if (paymentMethod === "paypal" && data?.payload?.approvalURL) {
+          window.location.href = data.payload.approvalURL;
+        } else if (paymentMethod === "cod") {
+          setOrderPlaced(true);
           toast({
-            title: "Failed to place order. Please try again.",
-            description: data?.payload?.message || "Unknown error",
-            variant: "destructive",
+            title: "Thank you, order is placed successfully.",
+            variant: "default",
           });
+          await dispatch(clearCartOnServer(user?.id));
+          dispatch(clearCart());
+          // Navigate to account orders page after short delay
+          setTimeout(() => {
+            navigate("/shop/account");
+          }, 2000);
         }
-      })
-      .catch((error) => {
+      } else {
         setIsPaymemntStart(false);
-        console.error("Order placement error:", error);
         toast({
-          title: "An error occurred while placing the order.",
-          description: error.message || "Unknown error",
+          title: "Failed to place order. Please try again.",
+          description: data?.payload?.message || "Unknown error",
           variant: "destructive",
         });
+      }
+    } catch (error) {
+      setIsPaymemntStart(false);
+      console.error("Order placement error:", error);
+      toast({
+        title: "An error occurred while placing the order.",
+        description: error.message || "Unknown error",
+        variant: "destructive",
       });
+    }
   }
 
   if (orderPlaced) {
